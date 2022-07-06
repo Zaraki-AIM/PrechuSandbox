@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -49,51 +50,69 @@ public class RootLogicManager : MonoBehaviour
     public Button answerButton;
     public Button nextButton;
 
-    private void Start()
+    private IEnumerator Start()
     {
-        // 動作確認
-        //for(int i = 0;i<=29;i++)
-        //{
-        //    Debug.Log($"{i+1}問目なら達成率は{GetCorrectRate(i)}");
-        //}
-
-        // 1問目を赤に
+        // 1問目を赤に（ここで1問目の初期化を行う）
         list.transform.GetChild(0).GetComponent<Image>().color = Color.red;
 
         answerButton.onClick.AddListener(OnclickAnswerButton);
         nextButton.onClick.AddListener(OnclickNextButton);
 
+        return Test();
     }
 
     /// <summary>
-    /// 
+    /// 動作確認用。延々とランダムに正誤判定を繰り返す。5問終わったら再度シーン起動
+    /// </summary>
+    /// <returns></returns>
+    public IEnumerator Test()
+    {
+        System.Random r1 = new System.Random();
+
+        for (int i = 0; i < 5; i++)
+        {
+            yield return new WaitForSeconds(1.0f);
+            int random = r1.Next(1, 101);
+            correctOrWrong.isOn = random <= 50;
+            OnclickAnswerButton();
+            yield return new WaitForSeconds(1.0f);
+            if (i != 4)
+            {
+                OnclickNextButton();
+            }
+            yield return new WaitForSeconds(1.0f);
+        }
+
+        SceneManager.LoadScene("RootLogic");
+    }
+
+    /// <summary>
+    /// 現在の問題インデックスと連続正解係数から、次の問題のインデックスを計算する
     /// </summary>
     /// <param name="nowIndex">今取り組んでいた問題のIndex</param>
     /// <param name="bonus">連続正解係数</param>
     /// <param name="isCorrectNow">今取り組んでいた問題が正解かどうか</param>
     /// <returns>次の問題のIndex</returns>
-    public int SearchNextQuestion(int nowIndex,int bonus,bool isCorrectNow)
+    public int SearchNextQuestion(int nowIndex, int bonus, bool isCorrectNow)
     {
         // 正解ならボーナスをつけて次のIndexを算出
         // 不正解なら単純に+2する
         int nextIndex = isCorrectNow ? nowIndex + CORRECT_STEP + (bonus - 1) * BASIC_STEP : nowIndex + BASIC_STEP;
-
+        if(isCorrectNow)
+        {
+            Debug.Log($"正解です。{bonus}回連続正解で{CORRECT_STEP + (bonus - 1) * BASIC_STEP}つ先に進みます。");
+        }
+        else
+        {
+            Debug.Log($"まちがいです。{BASIC_STEP}つ先に進みます。");
+        }
         // L3問題で正解した場合はIndexをはみ出す場合があるので最終調整
         nextIndex = Mathf.Min(nextIndex, MAX_QUESTION_INDEX);
-        Debug.Log($"次は{nextIndex+1}問目です");
+        Debug.Log($"次は{nextIndex + 1}問目です");
         return nextIndex;
     }
 
-    /// <summary>
-    /// 正誤判定を行う
-    /// </summary>
-    /// <param name="choicedIndex">選択した選択肢のID</param>
-    /// <param name="nowQuestion">正解のID</param>
-    /// <returns>正誤結果</returns>
-    public bool IsCorrect(int choicedIndex,Question nowQuestion)
-    {
-        return choicedIndex == nowQuestion.correctChoiceIndex;
-    }
+
 
     /// <summary>
     /// 答え合わせをタップした時の一連の流れ
@@ -119,7 +138,7 @@ public class RootLogicManager : MonoBehaviour
         if (questionTotalCount == MAX_QUESTION_COUNT)
         {
             // 達成率を計算
-            Debug.Log($"達成率は{GetCorrectRate(nowIndex)}");
+            Debug.Log($"達成率は{GetCorrectRate(nowIndex)}%です");
         }
 
         // 次の問題のインデックスを指定
@@ -139,11 +158,11 @@ public class RootLogicManager : MonoBehaviour
         // インデックスと問題数の調整
         lastQuestionIndex += 1;
         int correctRate = 30;
-        if(1 <= lastQuestionIndex && lastQuestionIndex <= 5)
+        if (1 <= lastQuestionIndex && lastQuestionIndex <= 5)
         {
             correctRate = 30;
         }
-        else if(6 <= lastQuestionIndex && lastQuestionIndex <= 10)
+        else if (6 <= lastQuestionIndex && lastQuestionIndex <= 10)
         {
             correctRate = 40;
         }
@@ -171,6 +190,11 @@ public class RootLogicManager : MonoBehaviour
         {
             correctRate = 100;
         }
+        else
+        {
+            // デフォルト
+            correctRate = 30;
+        }
 
         return correctRate;
     }
@@ -186,18 +210,29 @@ public class RootLogicManager : MonoBehaviour
         answerButton.interactable = true;
         nextButton.interactable = false;
     }
+
+    /// <summary>
+    /// 正誤判定を行う
+    /// </summary>
+    /// <param name="choicedIndex">選択した選択肢のID</param>
+    /// <param name="nowQuestion">正解のID</param>
+    /// <returns>正誤結果</returns>
+    //public bool IsCorrect(int choicedIndex, Question nowQuestion)
+    //{
+    //    return choicedIndex == nowQuestion.correctChoiceIndex;
+    //}
 }
 
-public class Question
-{
-    public int questionId;
-    public List<string> choiceList;
-    public int correctChoiceIndex;
+//public class Question
+//{
+//    public int questionId;
+//    public List<string> choiceList;
+//    public int correctChoiceIndex;
 
-    public Question(int questionId,List<string>choiceList,int correctChoiceIndex)
-    {
-        this.questionId = questionId;
-        this.choiceList = choiceList;
-        this.correctChoiceIndex = correctChoiceIndex;
-    }
-}
+//    public Question(int questionId,List<string>choiceList,int correctChoiceIndex)
+//    {
+//        this.questionId = questionId;
+//        this.choiceList = choiceList;
+//        this.correctChoiceIndex = correctChoiceIndex;
+//    }
+//}
